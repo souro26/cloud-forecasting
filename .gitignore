@@ -1,0 +1,21 @@
+
+# Virtual environment and Python cache
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Local data 
+data/raw/
+data/processed/
+
+# Jupyter-generated files
+.ipynb_checkpoints/
+
+# Environment variables and secrets
+.env
+.env.*
+
+# Generated local artifacts
+*.log
