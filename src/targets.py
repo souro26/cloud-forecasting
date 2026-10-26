@@ -1,4 +1,3 @@
-
 import pandas as pd
 
 TARGET_COLUMNS = [
@@ -7,7 +6,9 @@ TARGET_COLUMNS = [
     "aggregate_cpu_utilization",
 ]
 
+
 def build_aggregate_targets(cpu_readings: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate VM readings into one utilization target per timestamp."""
     if not isinstance(cpu_readings, pd.DataFrame):
         raise TypeError("cpu_readings must be a pandas DataFrame.")
 
@@ -34,9 +35,6 @@ def build_aggregate_targets(cpu_readings: pd.DataFrame) -> pd.DataFrame:
     if not pd.api.types.is_numeric_dtype(cpu_readings["avg_cpu"]):
         raise ValueError("avg_cpu must be numeric.")
 
-    if not pd.api.types.is_numeric_dtype(cpu_readings["vm_id"]):
-        pass
-
     if not pd.Series(cpu_readings["timestamp"]).map(
         lambda value: pd.notna(value) and float(value).is_integer()
     ).all():
@@ -44,15 +42,16 @@ def build_aggregate_targets(cpu_readings: pd.DataFrame) -> pd.DataFrame:
 
     avg_cpu = cpu_readings["avg_cpu"]
 
-    if not pd.Series(avg_cpu).map(lambda value: pd.notna(value) and abs(value) != float("inf")).all():
+    finite_avg_cpu = pd.Series(avg_cpu).map(
+        lambda value: pd.notna(value) and abs(value) != float("inf")
+    )
+    if not finite_avg_cpu.all():
         raise ValueError("avg_cpu must contain finite values.")
 
     if not avg_cpu.between(0, 100).all():
         raise ValueError("avg_cpu values must be between 0 and 100.")
 
-    duplicate_keys = cpu_readings.duplicated(
-        subset=["vm_id", "timestamp"]
-    )
+    duplicate_keys = cpu_readings.duplicated(subset=["vm_id", "timestamp"])
 
     if duplicate_keys.any():
         raise ValueError(
@@ -60,8 +59,7 @@ def build_aggregate_targets(cpu_readings: pd.DataFrame) -> pd.DataFrame:
         )
 
     aggregate = (
-        cpu_readings
-        .groupby("timestamp", as_index=False)
+        cpu_readings.groupby("timestamp", as_index=False)
         .agg(
             active_vm_count=("vm_id", "nunique"),
             aggregate_cpu_utilization=("avg_cpu", "mean"),
